@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>镜面金属激光雕刻图像处理软件3</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        li{
+            list-style: none;
+        }
+
+        /* 上半部分 */
+        #top{
+            height: 100px;
+            background-color: rgb(200, 198, 156);
+            text-align: center;
+        }
+        #top_main{
+            padding-top: 25px;
+            font-size: 35px;
+            font-style:initial;
+            cursor:pointer;
+            min-width: 500px;
+        }
+        /* 中间部分 */
+        #main{
+            height: 600px;
+            /* background-color: antiquewhite; */
+            text-align: center;
+            min-width: 1400px;
+        }
+        /* 中左 */
+        #main_left{
+            width: 300px;
+            height: 600px;
+            background-color: rgb(210, 210, 210);
+            display: inline-block;
+        }
+        /* 中左菜单栏 */
+        /* 正中 */
+        #main_main{
+            width: 800px;
+            height: 600px;
+            border: solid 1px black;
+            display: inline-block;
+            /* 于顶部对齐 */
+            vertical-align: top;
+        }
+        #main_main_img{
+            height: 500px;
+            width: 500px;
+            border: 1px solid rgb(37, 97, 227);
+            float: left;
+        }
+        #main_main_base{
+            height: 500px;
+            width: 500px;
+            border: 1px solid rgb(89, 216, 30);
+            /* background-color: rgb(168, 101, 19); */
+            color: skyblue;
+            font-size: 25px;
+            float: left;
+            position: absolute;
+        }
+        #main_main_jia{
+            margin-top: 40%;
+        }
+        #main_main_btn{
+            height: 100%;
+            width: 100%;
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #myCanvas{
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- TOP -->
+    <div id="top">
+        <div id="top_main">
+            镜面金属激光雕刻图像处理软件
+        </div>
+    </div>
+    <!-- main -->
+    <div id="main">
+        <!-- 中左 -->
+        <div id="main_left">
+            <ul>
+                <li>
+                    <input type="button" value="上传图像" id="uploadTop">
+                </li>
+                <li>
+                    <input type="button" value="灰度化" id="" onclick="grayScale();">
+                </li>
+                <li>
+                    <input type="button" value="生成二值图像" id="bin" onclick="binarization();">
+                </li>
+                <li>
+                    <input type="button" value="返回原图" id="resetBtn" onclick="reset();" >
+                </li>
+                <li>
+                    <input type="number" value="180" id="getMetal1" min="0" max="255">
+                    <input type="number" value="180" id="getMetal2" min="0" max="255">
+                    <input type="number" value="180" id="getMetal3" min="0" max="255">
+                    <input type="button" value="设置金属背景" id="" onclick="metalBack();">
+                </li>
+                <!-- 一键设置金属背景 -->
+                <li>
+                    <input type="button" value="纯铝" id="metalBack_set1">
+                    <input type="button" value="黄金" id="metalBack_set2">
+                    <input type="button" value="银" id="metalBack_set3">
+                    <input type="button" value="铜" id="metalBack_set4">
+                    <input type="button" value="纯铬" id="metalBack_set5">
+                    <input type="button" value="不锈钢" id="metalBack_set6">
+                </li>
+                <li>
+                    <input type="number" value="128" id="getNum">
+                    <input type="button" value="设置二值化阈值" id="setNum" onclick="setNum()" >
+                </li>
+                <li>
+                    <input type="range" max="50" min="-50"  id="contrast">
+                    <p id="contrastText">对比度：0</p>
+                </li>
+                <li>
+                    <input type="range" id="brightness" min="-50" max="50" step="1" value="0">
+                    <p id="brightnessText">亮度：0</p>
+                </li>
+            </ul>
+        </div>
+        <!-- 正中 -->
+        <div id="main_main">
+            <div id="main_main_img">
+                <canvas id="myCanvas"></canvas>
+            </div>
+            <div id="main_main_base">
+                <div id="main_main_jia">
+                    +
+                </div>
+                <div id="main_main_text">
+                    点击添加图片
+                </div>
+                <input type="file"  id="main_main_btn" onchange="onloadPic(this)">
+            </div>
+        </div>
+    </div>
+    <!-- bottom -->
+    <div></div>
+</body>
+<script>
+    var uploadTop = document.getElementById('uploadTop');
+    const canvas = document.getElementById('myCanvas');
+    const resetBtn = document.getElementById("resetBtn");
+    const ctx = canvas.getContext('2d');
+    let operationImgData;//每一步新生成的图像
+    const img = new Image();
+    var getMetal1 = document.getElementById('getMetal1')
+    var getMetal2 = document.getElementById('getMetal2')
+    var getMetal3 = document.getElementById('getMetal3')
+    // 金属背景
+    var metalBack_set1 = document.getElementById('metalBack_set1')
+    var metalBack_set2 = document.getElementById('metalBack_set2')
+    var metalBack_set3 = document.getElementById('metalBack_set3')
+    var metalBack_set4 = document.getElementById('metalBack_set4')
+    var metalBack_set5 = document.getElementById('metalBack_set5')
+    var metalBack_set6 = document.getElementById('metalBack_set6')
+    // 对比度
+    var contrastRange = document.getElementById('contrast')
+    var contrastText = document.getElementById('contrastText')
+    let originalContrast = 0;
+    // 实时变动对比度
+    canvas.addEventListener('load',() =>{
+        const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+        const contrast = calculateContrast(imageData.data);
+        originalContrast = 0;
+    })
+    function calculateContrast(data) {  
+        let contrast = 0;
+        var factor = (contrast + 1)/(1-contrast/2);
+        for(let i = 0; i <data.length;i += 4){
+            data[i] = factor * (data[i] - 128) + 128;
+            data[i + 1] = factor * (data[i + 1] - 128) + 128;
+            data[i + 2] = factor * (data[i + 2] - 128) + 128;
+        }
+    }
+    contrastRange.addEventListener('input',() =>{
+        const contrastValue = contrastRange.value;
+        contrastText.innerHTML = '对比度:' + contrastValue;
+        const adjustedContrast = originalContrast + Number(contrastValue);
+        canvas.style.filter = `contrast(${(100 + adjustedContrast) / 100})` 
+    })
+
+    //亮度
+    var brightnessRange = document.getElementById('brightness')
+    var brightnessText = document.getElementById('brightnessText')
+    let originalBrightness = 0;
+    // 获取原始亮度值
+    canvas.addEventListener('load', () => {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const brightness = calculateBrightness(imageData.data);
+        originalBrightness = brightness;
+    });
+    // 计算图像亮度
+    function calculateBrightness(data) {
+        let brightness = 0;
+        for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        brightness += (0.2126 * r + 0.7152 * g + 0.0722 * b);
+        }
+        brightness /= (data.length / 4);
+        return brightness;
+    }
+    // 更新图像亮度
+    brightnessRange.addEventListener('input', () => {
+        const brightnessValue = brightnessRange.value;
+        brightnessText.innerHTML = '亮度:'+brightnessValue;
+        
+        const adjustedBrightness = originalBrightness + Number(brightnessValue);
+        canvas.style.filter = `brightness(${(100 + adjustedBrightness) / 100})`;
+    });
+
+    //上传图像按钮顶部
+    // 上传图像并预览
+    function onloadPic(input) {
+        // reset()
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            
+            // img运行完触发
+                img.onload = function() {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    // imgData = ctx.getImageData(0, 0, img.width, img.height);
+                    originalImgData = ctx.getImageData(0, 0, img.width, img.height); // 保存原图像数据的副本
+                    // operationImgData = ctx.getImageData(0, 0, img.width, img.height); // 保存原图像数据的副本
+                    resetBtn.style.display = "inline-block";
+                };
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+            
+            // 隐形添加符号
+        var clear1 = document.getElementById('main_main_base')
+            // clear1.style.opacity = '0'
+            clear1.style.display = 'none'
+    }
+
+    function grayScale(){
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        for(let i = 0; i <data.length; i += 4){
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            data[i] = gray;
+            data[i+1] = gray;
+            data[i+2] = gray;
+        }
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    var a = 0
+    var qwe = document.getElementById('resetBtn').disabled
+    // 二值化
+    function binarization() {
+        // 防止重复点击让图像质量变差
+        if (a === 1) {
+            qwe = true
+            ctx.putImageData(binarizationImgData, 0, 0);
+            // return a
+        }else{
+            a++
+        }
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        // 设置阈值,一般为128，值越高产生的黑点越多
+        // const threshold = 118;
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            if(gray < threshold){
+                const value = 0;
+                data[i] = value;
+                data[i + 1] = value;
+                data[i + 2] = value;
+            }
+            //设置金属背景
+            else{
+                data[i] = getMetal1.value;
+                data[i + 1] = getMetal2.value;
+                data[i + 2] = getMetal3.value;
+            }
+        }
+        binarizationImgData = ctx.getImageData(0, 0, canvas.width, canvas.height); // 保存二值化图像数据的副本
+        canvas.style.backgroundColor = metalValue
+        ctx.putImageData(imageData, 0, 0);
+        return binarizationImgData
+    }
+    
+    // 重置
+    function reset() {
+        canvas.style.filter = `brightness(1)`;
+        canvas.style.backgroundColor = 'rgb(255,255,255)';//针对未抠图图片
+        ctx.putImageData(originalImgData, 0, 0); // 将图像还原为原来的图像
+        imgData = ctx.getImageData(0, 0, canvas.width, canvas.height); // 获取新的图像数据
+    }
+
+    // 设置金属背景值
+    function metalBack(){
+        metalValue = `rgb(${getMetal1.value},${getMetal2.value},${getMetal3.value})`
+    }
+    metalBack()
+
+    // 设置阈值
+    function setNum(){
+        var getNum = document.getElementById('getNum');
+        threshold = getNum.value
+    }
+    setNum()
+
+    //一键设置金属背景
+    // 纯铝
+    metalBack_set1.onclick = function(){
+        getMetal1.value = 180;
+        getMetal2.value = 180;
+        getMetal3.value = 180;
+        metalBack()
+    }
+    // 黄金
+    metalBack_set2.onclick = function(){
+        getMetal1.value = 242;
+        getMetal2.value = 192;
+        getMetal3.value = 86;
+        metalBack()
+    }
+    // 银
+    metalBack_set3.onclick = function(){
+        getMetal1.value = 233;
+        getMetal2.value = 233;
+        getMetal3.value = 216;
+        metalBack()
+    }
+    // 铜
+    metalBack_set4.onclick = function(){
+        getMetal1.value = 186;
+        getMetal2.value = 110;
+        getMetal3.value = 64;
+        metalBack()
+    }
+    // 纯铬
+    metalBack_set5.onclick = function(){
+        getMetal1.value = 220;
+        getMetal2.value = 230;
+        getMetal3.value = 240;
+        metalBack()
+    }
+    // 不锈钢
+    metalBack_set6.onclick = function(){
+        getMetal1.value = 128;
+        getMetal2.value = 128;
+        getMetal3.value = 126;
+        metalBack()
+    }
+
+</script>
+</html>
